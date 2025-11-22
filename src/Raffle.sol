@@ -40,7 +40,15 @@ contract Raffle is VRFConsumerBaseV2Plus{
 
     error Raffle_sendMoreToEnterRaffle();
     error  Raffle__TransferFailed();
+    error Raffle_RaffleNotOpen();
 
+    /* SType declarations */
+    enum RaffleState{
+        OPEN,
+        CALCULATING
+    }
+
+    /* State variables */
     uint256 private immutable i_entranceFee;
     uint16 constant REQUEST_CONFIRMATION = 3;
     uint16 constant NUM_WORDS = 1;
@@ -51,9 +59,11 @@ contract Raffle is VRFConsumerBaseV2Plus{
     bytes32 private immutable i_keyHash;
     uint256 private immutable i_subscriptionId;
     address private s_recentWinner;
+    RaffleState private s_raffleState;
 
     /* events */
     event RaffleEntered(address indexed player);
+    event WinnerPicked(address indexed winner);
 
     constructor(uint256 entranceFee , uint256 interval, address vrfCoordinator, bytes32 gasLane, uint256 subscriptionId, uint32 callbackGasLimit) 
     VRFConsumerBaseV2Plus(vrfCoordinator){
@@ -63,6 +73,7 @@ contract Raffle is VRFConsumerBaseV2Plus{
         i_keyHash = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
+        s_raffleState = RaffleState.OPEN;
     }
 
     function enterRaffle() external payable {
@@ -73,6 +84,10 @@ contract Raffle is VRFConsumerBaseV2Plus{
         //in the latest version of solidity there is one more efficient method
         //revert (msg.value<i_entranceFee , Raffle_sendMoreToEnterRaffle()). this is the most cost efficient
 
+        if(s_raffleState != RaffleState.OPEN){
+            revert Raffle_RaffleNotOpen(); 
+        }
+
         s_players.push(payable(msg.sender));
         emit RaffleEntered(msg.sender);
     }
@@ -82,6 +97,8 @@ contract Raffle is VRFConsumerBaseV2Plus{
         if((block.timestamp-s_lastTimeStamp)<i_interval){
             revert();
         }
+
+        s_raffleState = RaffleState.CALCULATING;
 
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
                 keyHash: i_keyHash,
@@ -102,10 +119,15 @@ contract Raffle is VRFConsumerBaseV2Plus{
         uint256 indexOfWinner = randomWords[0]%s_players.length;
         address payable recentWinner = s_players[indexOfWinner];
         s_recentWinner = recentWinner;
+        s_raffleState = RaffleState.OPEN;
+        s_players = new address payable[](0);
+        s_lastTimeStamp = block.timestamp;
+
         (bool success,) = recentWinner.call{value: address(this).balance}("");
         if(!success){
             revert Raffle__TransferFailed();
         }
+        emit WinnerPicked(s_recentWinner);
     }
 
     /**
