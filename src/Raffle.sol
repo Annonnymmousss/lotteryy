@@ -66,7 +66,13 @@ contract Raffle is VRFConsumerBaseV2Plus{
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
 
-    constructor(uint256 entranceFee , uint256 interval, address vrfCoordinator, bytes32 gasLane, uint256 subscriptionId, uint32 callbackGasLimit) 
+    constructor(
+        uint256 entranceFee, 
+        uint256 interval, 
+        address vrfCoordinator, 
+        bytes32 gasLane, 
+        uint256 subscriptionId, 
+        uint32 callbackGasLimit) 
     VRFConsumerBaseV2Plus(vrfCoordinator){
         i_entranceFee = entranceFee;
         i_interval=interval;
@@ -105,12 +111,12 @@ contract Raffle is VRFConsumerBaseV2Plus{
      */
 
     function checkUpkeep(bytes memory /* checkData */) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
-    bool isOpen = RaffleState.OPEN == s_raffleState;
-    bool timePassed = ((block.timestamp - s_lastTimeStamp) >= i_interval);
-    bool hasPlayers = s_players.length > 0;
-    bool hasBalance = address(this).balance > 0;
-    upkeepNeeded = (timePassed && isOpen && hasBalance && hasPlayers);
-    return (upkeepNeeded, "");
+        bool isOpen = RaffleState.OPEN == s_raffleState;
+        bool timePassed = ((block.timestamp - s_lastTimeStamp) >= i_interval);
+        bool hasPlayers = s_players.length > 0;
+        bool hasBalance = address(this).balance > 0;
+        upkeepNeeded = (timePassed && isOpen && hasBalance && hasPlayers);
+        return (upkeepNeeded, "");
 }
 
     function performUpkeep(bytes calldata /* performData */) external {
@@ -161,5 +167,9 @@ contract Raffle is VRFConsumerBaseV2Plus{
 
     function getEntranceFee() external view returns (uint256) {
         return i_entranceFee;
+    }
+
+    function getRaffleState() external view returns(RaffleState){
+        return s_raffleState;
     }
 }
