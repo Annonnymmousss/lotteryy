@@ -73,7 +73,7 @@ contract Raffle is VRFConsumerBaseV2Plus{
         bytes32 gasLane, 
         uint256 subscriptionId, 
         uint32 callbackGasLimit) 
-    VRFConsumerBaseV2Plus(vrfCoordinator){
+        VRFConsumerBaseV2Plus(vrfCoordinator){
         i_entranceFee = entranceFee;
         i_interval=interval;
         s_lastTimeStamp=block.timestamp;
@@ -145,7 +145,7 @@ contract Raffle is VRFConsumerBaseV2Plus{
         
         s_vrfCoordinator.requestRandomWords(request);
     }
-    
+
     function fulfillRandomWords(uint256 /*requestId*/, uint256[] calldata randomWords) internal override{
         uint256 indexOfWinner = randomWords[0]%s_players.length;
         address payable recentWinner = s_players[indexOfWinner];
