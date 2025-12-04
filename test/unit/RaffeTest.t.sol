@@ -26,6 +26,7 @@ contract RaffleTest is Test{
 
     function setUp() external {
         DeployRaffle deployer = new DeployRaffle();
+        vm.deal(PLAYER, 10 ether);
 
         (raffle, helperConfig) = deployer.deployContract();
 
@@ -80,7 +81,7 @@ contract RaffleTest is Test{
         raffle.performUpkeep("");
 
         //Act/Assert
-        vm.expectRevert();
+        vm.expectRevert(Raffle.Raffle_RaffleNotOpen.selector);
         vm.prank(PLAYER);
 
         raffle.enterRaffle{value : entranceFee}();
