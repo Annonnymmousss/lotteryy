@@ -26,6 +26,7 @@
 pragma solidity 0.8.19;
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+
 /**
  * @title A sample Raffle Contract
  * @author Patrick Collins (or even better, you own name)
@@ -33,7 +34,7 @@ import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/V
  * @dev It implements Chainlink VRFv2.5 and Chainlink Automation
  */
 
-contract Raffle is VRFConsumerBaseV2Plus{
+contract Raffle is VRFConsumerBaseV2Plus {
     /**
      * errors
      */
@@ -41,10 +42,14 @@ contract Raffle is VRFConsumerBaseV2Plus{
     error Raffle_sendMoreToEnterRaffle();
     error Raffle__TransferFailed();
     error Raffle_RaffleNotOpen();
-    error Raffle_UpkeepNotNeeded(uint256 balance, uint256 length, uint256 raffleState);
+    error Raffle_UpkeepNotNeeded(
+        uint256 balance,
+        uint256 length,
+        uint256 raffleState
+    );
 
     /* SType declarations */
-    enum RaffleState{
+    enum RaffleState {
         OPEN,
         CALCULATING
     }
@@ -68,16 +73,16 @@ contract Raffle is VRFConsumerBaseV2Plus{
     event RequestRaffleWinner(uint256 indexed requestId);
 
     constructor(
-        uint256 entranceFee, 
-        uint256 interval, 
-        address vrfCoordinator, 
-        bytes32 gasLane, 
-        uint256 subscriptionId, 
-        uint32 callbackGasLimit) 
-        VRFConsumerBaseV2Plus(vrfCoordinator){
+        uint256 entranceFee,
+        uint256 interval,
+        address vrfCoordinator,
+        bytes32 gasLane,
+        uint256 subscriptionId,
+        uint32 callbackGasLimit
+    ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entranceFee;
-        i_interval=interval;
-        s_lastTimeStamp=block.timestamp;
+        i_interval = interval;
+        s_lastTimeStamp = block.timestamp;
         i_keyHash = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
@@ -92,8 +97,8 @@ contract Raffle is VRFConsumerBaseV2Plus{
         //in the latest version of solidity there is one more efficient method
         //revert (msg.value<i_entranceFee , Raffle_sendMoreToEnterRaffle()). this is the most cost efficient
 
-        if(s_raffleState != RaffleState.OPEN){
-            revert Raffle_RaffleNotOpen(); 
+        if (s_raffleState != RaffleState.OPEN) {
+            revert Raffle_RaffleNotOpen();
         }
 
         s_players.push(payable(msg.sender));
@@ -111,28 +116,34 @@ contract Raffle is VRFConsumerBaseV2Plus{
      * 5. Implicitly, your subscription is funded with LINK.
      */
 
-    function checkUpkeep(bytes memory /* checkData */) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
+    function checkUpkeep(
+        bytes memory /* checkData */
+    ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
         bool isOpen = RaffleState.OPEN == s_raffleState;
         bool timePassed = ((block.timestamp - s_lastTimeStamp) >= i_interval);
         bool hasPlayers = s_players.length > 0;
         bool hasBalance = address(this).balance > 0;
         upkeepNeeded = (timePassed && isOpen && hasBalance && hasPlayers);
         return (upkeepNeeded, "");
-}
+    }
 
     function performUpkeep(bytes calldata /* performData */) external {
-
-        (bool upkeepNeeded,) = checkUpkeep("");
-        if(!upkeepNeeded){
-            revert Raffle_UpkeepNotNeeded(address(this).balance, s_players.length, uint256(s_raffleState));
+        (bool upkeepNeeded, ) = checkUpkeep("");
+        if (!upkeepNeeded) {
+            revert Raffle_UpkeepNotNeeded(
+                address(this).balance,
+                s_players.length,
+                uint256(s_raffleState)
+            );
         }
-        if((block.timestamp-s_lastTimeStamp)<i_interval){
+        if ((block.timestamp - s_lastTimeStamp) < i_interval) {
             revert();
         }
 
         s_raffleState = RaffleState.CALCULATING;
 
-        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
+        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
+            .RandomWordsRequest({
                 keyHash: i_keyHash,
                 subId: i_subscriptionId,
                 requestConfirmations: REQUEST_CONFIRMATION,
@@ -143,22 +154,24 @@ contract Raffle is VRFConsumerBaseV2Plus{
                 )
             });
 
-        
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
 
         emit RequestRaffleWinner(requestId);
     }
 
-    function fulfillRandomWords(uint256 /*requestId*/, uint256[] calldata randomWords) internal override{
-        uint256 indexOfWinner = randomWords[0]%s_players.length;
+    function fulfillRandomWords(
+        uint256 /*requestId*/,
+        uint256[] calldata randomWords
+    ) internal override {
+        uint256 indexOfWinner = randomWords[0] % s_players.length;
         address payable recentWinner = s_players[indexOfWinner];
         s_recentWinner = recentWinner;
         s_raffleState = RaffleState.OPEN;
         s_players = new address payable[](0);
         s_lastTimeStamp = block.timestamp;
 
-        (bool success,) = recentWinner.call{value: address(this).balance}("");
-        if(!success){
+        (bool success, ) = recentWinner.call{value: address(this).balance}("");
+        if (!success) {
             revert Raffle__TransferFailed();
         }
         emit WinnerPicked(s_recentWinner);
@@ -172,7 +185,7 @@ contract Raffle is VRFConsumerBaseV2Plus{
         return i_entranceFee;
     }
 
-    function getRaffleState() external view returns(RaffleState){
+    function getRaffleState() external view returns (RaffleState) {
         return s_raffleState;
     }
 

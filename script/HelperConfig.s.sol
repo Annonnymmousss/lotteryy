@@ -17,7 +17,6 @@ abstract contract CodeConstants {
 }
 
 contract HelperConfig is CodeConstants, Script {
-
     error HelperConfig_InvalidChainId();
 
     struct NetworkConfig {
@@ -35,45 +34,52 @@ contract HelperConfig is CodeConstants, Script {
 
     mapping(uint256 chainId => NetworkConfig) public networkConfigs;
 
-    constructor(){
+    constructor() {
         networkConfigs[ETH_SEPOLIA_CHAIN_ID] = getSepoliaEthConfig();
     }
 
-    function getConfigByChainId(uint256 chainId) public returns (NetworkConfig memory){
-        if(networkConfigs[chainId].vrfCoordinator != address(0)){
+    function getConfigByChainId(
+        uint256 chainId
+    ) public returns (NetworkConfig memory) {
+        if (networkConfigs[chainId].vrfCoordinator != address(0)) {
             return networkConfigs[chainId];
-        }else if(chainId == LOCAL_CHAIN_ID){
+        } else if (chainId == LOCAL_CHAIN_ID) {
             return getOrCreateAnvilEthConfig();
-        }else{
+        } else {
             revert HelperConfig_InvalidChainId();
         }
     }
 
-    function getSepoliaEthConfig () public pure returns(NetworkConfig memory){
-        return NetworkConfig({
-            interval: 30, 
-            entranceFee: 0.01 ether, 
-            vrfCoordinator:0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B,
-            gasLane:0xe9f223d7d83ec85c4f78042a4845af3a1c8df7757b4997b815ce4b8d07aca68c,
-            callbackGasLimit: 500000, 
-            subscriptionId: 13841877440246481097940584648018361563156188430845803594076136094535055853353,
-            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
-            account: 0x9A5A1F42f6a790A0423C19B7FC1Dd5F4Fef4A529
-        });
+    function getSepoliaEthConfig() public pure returns (NetworkConfig memory) {
+        return
+            NetworkConfig({
+                interval: 30,
+                entranceFee: 0.01 ether,
+                vrfCoordinator: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B,
+                gasLane: 0xe9f223d7d83ec85c4f78042a4845af3a1c8df7757b4997b815ce4b8d07aca68c,
+                callbackGasLimit: 500000,
+                subscriptionId: 13841877440246481097940584648018361563156188430845803594076136094535055853353,
+                link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+                account: 0x9A5A1F42f6a790A0423C19B7FC1Dd5F4Fef4A529
+            });
     }
 
-    function getConfig() public returns(NetworkConfig memory){
+    function getConfig() public returns (NetworkConfig memory) {
         return getConfigByChainId(block.chainid);
     }
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
-    // Check to see if we set an active network localNetworkConfig
+        // Check to see if we set an active network localNetworkConfig
         if (localNetworkConfig.vrfCoordinator != address(0)) {
             return localNetworkConfig;
         }
 
         vm.startBroadcast();
-        VRFCoordinatorV2_5Mock vrfCoordinatorMock = new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
+        VRFCoordinatorV2_5Mock vrfCoordinatorMock = new VRFCoordinatorV2_5Mock(
+            MOCK_BASE_FEE,
+            MOCK_GAS_PRICE_LINK,
+            MOCK_WEI_PER_UNIT_LINK
+        );
         LinkToken linkToken = new LinkToken();
         vm.stopBroadcast();
 
@@ -85,11 +91,10 @@ contract HelperConfig is CodeConstants, Script {
             gasLane: 0xe9f223d7d83ec85c4f78042a4845af3a1c8df7757b4997b815ce4b8d07aca68c,
             subscriptionId: 0,
             callbackGasLimit: 500_000,
-            link:address(linkToken),
+            link: address(linkToken),
             account: 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38
         });
 
         return localNetworkConfig;
-
     }
 }
